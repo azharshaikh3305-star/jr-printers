@@ -211,9 +211,3 @@ npm run dev
 
 ---
 
-## 6. Seed Credentials
-
-- **Admin Account**: `admin@jrprinting.in`
-- **Admin Password**: `AdminSuperPassword7888`
-- **Admin Security PIN**: `7888`
-- **Proprietor Contact**: +91 7888162822 / +91 7888162824
