@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CompleteDesign, PrintView } from '../../types';
+import { isApparelType } from '../../data/printAreas';
 import { GARMENT_OPTIONS, JR_INFO } from '../../data/products';
 import {
   Undo2,
@@ -57,7 +58,23 @@ export const DesignerTopBar: React.FC<DesignerTopBarProps> = ({
   // Dynamic live pricing computation:
   // Base garment price
   const garmentOpt = GARMENT_OPTIONS.find((g) => g.id === design.garmentId) || GARMENT_OPTIONS[0];
-  const basePrice = garmentOpt.basePrice;
+  const isApparel = isApparelType(design.garmentId);
+  const basePrice = design.productBasePrice ?? garmentOpt.basePrice;
+  const itemLabel = isApparel
+    ? 'Custom Tee'
+    : {
+        'ceramic-cup': 'Custom Cup',
+        'photo-pillow': 'Custom Pillow',
+        'sipper-bottle': 'Custom Bottle',
+        keychain: 'Custom Keychain',
+        'photo-frame': 'Custom Photo Frame',
+        'mobile-case': 'Custom Phone Case',
+        'classic-crew': 'Custom Tee',
+        'heavyweight-tee': 'Custom Tee',
+        'oversized-boxy': 'Custom Tee',
+        'french-terry-hoodie': 'Custom Hoodie',
+        'pique-polo': 'Custom Polo',
+      }[design.garmentId];
 
   // Print locations costs
   const hasFront = (design.views.front?.objects || []).length > 0;
@@ -67,15 +84,19 @@ export const DesignerTopBar: React.FC<DesignerTopBarProps> = ({
 
   const frontPrintCost = hasFront ? 199 : 0;
   const backPrintCost = hasBack ? 199 : 0;
-  const sleevePrintCost = (hasLeftSleeve ? 99 : 0) + (hasRightSleeve ? 99 : 0);
+  const sleevePrintCost = isApparel ? (hasLeftSleeve ? 99 : 0) + (hasRightSleeve ? 99 : 0) : 0;
 
   const totalCalculatedPrice = basePrice + frontPrintCost + backPrintCost + sleevePrintCost;
 
   const viewsList: Array<{ id: PrintView; label: string; count: number }> = [
     { id: 'front', label: 'Front', count: design.views.front?.objects.length || 0 },
     { id: 'back', label: 'Back', count: design.views.back?.objects.length || 0 },
-    { id: 'leftSleeve', label: 'L Sleeve', count: design.views.leftSleeve?.objects.length || 0 },
-    { id: 'rightSleeve', label: 'R Sleeve', count: design.views.rightSleeve?.objects.length || 0 },
+    ...(isApparel
+      ? [
+          { id: 'leftSleeve' as const, label: 'L Sleeve', count: design.views.leftSleeve?.objects.length || 0 },
+          { id: 'rightSleeve' as const, label: 'R Sleeve', count: design.views.rightSleeve?.objects.length || 0 },
+        ]
+      : []),
   ];
 
   return (
@@ -153,7 +174,7 @@ export const DesignerTopBar: React.FC<DesignerTopBarProps> = ({
           </div>
         </div>
 
-        {/* Center Section: 4-View Switcher (Front, Back, Left Sleeve, Right Sleeve) */}
+        {/* Center Section: Product print views */}
         <div className="flex items-center bg-stone-100 p-1 rounded-2xl border border-stone-200/80">
           {viewsList.map((v) => (
             <button
@@ -187,7 +208,7 @@ export const DesignerTopBar: React.FC<DesignerTopBarProps> = ({
                 ₹{totalCalculatedPrice}
               </span>
               <span className="text-[10px] text-stone-500">
-                (₹{garmentOpt.basePrice} base
+                (₹{basePrice} base
                 {frontPrintCost > 0 ? ' +₹199 front' : ''}
                 {backPrintCost > 0 ? ' +₹199 back' : ''}
                 {sleevePrintCost > 0 ? ` +₹${sleevePrintCost} sleeves` : ''})
@@ -242,7 +263,7 @@ export const DesignerTopBar: React.FC<DesignerTopBarProps> = ({
             className="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2"
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>Add Custom Tee (₹{totalCalculatedPrice})</span>
+            <span>Add {itemLabel} (₹{totalCalculatedPrice})</span>
           </button>
         </div>
       </div>

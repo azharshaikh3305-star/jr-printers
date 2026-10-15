@@ -5,8 +5,10 @@ import {
   PrintView,
   DesignObject,
   GarmentType,
+  Product,
 } from '../../types';
-import { GARMENT_OPTIONS, SIZES } from '../../data/products';
+import { isApparelType } from '../../data/printAreas';
+import { GARMENT_OPTIONS, PHONE_CASE_MODELS, SAMPLE_PRODUCTS, SIZES } from '../../data/products';
 import { DesignerCanvas } from './DesignerCanvas';
 import { DesignerLeftSidebar } from './DesignerLeftSidebar';
 import { DesignerRightSidebar } from './DesignerRightSidebar';
@@ -43,7 +45,7 @@ export const DesignerPage: React.FC = () => {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
   // Selected size for adding to cart
-  const [selectedSize, setSelectedSize] = useState('L');
+  const [selectedSize, setSelectedSize] = useState(activeDesign.productModel || 'L');
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   // Mobile Bottom Drawer State
@@ -52,10 +54,34 @@ export const DesignerPage: React.FC = () => {
   // Undo / Redo History Stack
   const [history, setHistory] = useState<CompleteDesign[]>([JSON.parse(JSON.stringify(activeDesign))]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const isApparel = isApparelType(activeDesign.garmentId);
+  const isMobileCase = activeDesign.garmentId === 'mobile-case';
+  const phoneModelVariants = activeDesign.productModelVariants || (isMobileCase ? PHONE_CASE_MODELS : {});
+  const phoneBrands = Object.keys(phoneModelVariants);
+  const selectedPhoneBrand = activeDesign.productBrand || phoneBrands[0] || '';
+  const availablePhoneModels = phoneModelVariants[selectedPhoneBrand] || [];
+  const availableSizes = isMobileCase
+    ? availablePhoneModels
+    : activeDesign.productSizes?.length
+      ? activeDesign.productSizes
+      : SIZES;
 
   // Ref to track latest design without re-triggering effects
   const designRef = useRef(activeDesign);
   designRef.current = activeDesign;
+
+  useEffect(() => {
+    if (!isApparelType(activeDesign.garmentId) && activeView !== 'front' && activeView !== 'back') {
+      setActiveView('front');
+      setSelectedIds([]);
+    }
+  }, [activeDesign.garmentId, activeView]);
+
+  useEffect(() => {
+    if (!availableSizes.includes(selectedSize)) {
+      setSelectedSize(isMobileCase ? (activeDesign.productModel || availableSizes[0]) : availableSizes[0]);
+    }
+  }, [activeDesign.id, activeDesign.productModel, availableSizes, isMobileCase, selectedSize]);
 
   // Push new state to undo/redo history
   const pushHistory = useCallback((newDesign: CompleteDesign) => {
@@ -321,18 +347,83 @@ export const DesignerPage: React.FC = () => {
     colorHex: string,
     colorName: string
   ) => {
+    const selectedGarment = GARMENT_OPTIONS.find((garment) => garment.id === garmentId);
     setActiveDesign((prev) => {
       const updated: CompleteDesign = {
         ...prev,
         garmentId,
         shirtColor: colorHex,
         shirtColorName: colorName,
+        ...(prev.garmentId !== garmentId && selectedGarment
+          ? {
+              sourceProductId: undefined,
+              productName: selectedGarment.name,
+              productBasePrice: selectedGarment.basePrice,
+              productSizes: SIZES,
+              productColors: undefined,
+              productMaterial: selectedGarment.material,
+              title: `Custom ${selectedGarment.name}`,
+            }
+          : {}),
         updatedAt: Date.now(),
       };
       pushHistory(updated);
       return updated;
     });
     addToast(`Garment updated to ${colorName}`, 'info');
+  };
+
+  const handleSelectProductVariant = (variant: string) => {
+    setSelectedSize(variant);
+    if (isMobileCase) {
+      setActiveDesign((prev) => ({ ...prev, productModel: variant, updatedAt: Date.now() }));
+    }
+  };
+
+  const handleSelectPhoneBrand = (brand: string) => {
+    const firstModel = activeDesign.productModelVariants?.[brand]?.[0] || PHONE_CASE_MODELS[brand]?.[0];
+    if (!firstModel) {
+      addToast(`No phone models are configured for ${brand}.`, 'error');
+      return;
+    }
+
+    setSelectedSize(firstModel);
+    setActiveDesign((prev) => ({
+      ...prev,
+      productModelVariants: prev.productModelVariants || PHONE_CASE_MODELS,
+      productBrand: brand,
+      productModel: firstModel,
+      updatedAt: Date.now(),
+    }));
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    const color = product.colors[0];
+    const modelVariants = product.modelVariants;
+    const brand = modelVariants ? Object.keys(modelVariants)[0] : undefined;
+    const model = brand ? modelVariants?.[brand]?.[0] : undefined;
+    const firstVariant = model || product.sizes[0];
+
+    setSelectedSize(firstVariant);
+    setActiveDesign((prev) => ({
+      ...prev,
+      title: `Custom ${product.name}`,
+      garmentId: product.garmentType,
+      sourceProductId: product.id,
+      productName: product.name,
+      productBasePrice: product.basePrice,
+      productSizes: product.sizes,
+      productColors: product.colors,
+      productMaterial: product.material,
+      productModelVariants: modelVariants,
+      productBrand: brand,
+      productModel: model,
+      shirtColor: color.hex,
+      shirtColorName: color.name,
+      updatedAt: Date.now(),
+    }));
+    setSelectedIds([]);
+    setActiveView('front');
   };
 
   // Load starter template
@@ -372,12 +463,12 @@ export const DesignerPage: React.FC = () => {
 
     const hasFront = (activeDesign.views.front?.objects || []).length > 0;
     const hasBack = (activeDesign.views.back?.objects || []).length > 0;
-    const hasLeft = (activeDesign.views.leftSleeve?.objects || []).length > 0;
-    const hasRight = (activeDesign.views.rightSleeve?.objects || []).length > 0;
+    const hasLeft = isApparel && (activeDesign.views.leftSleeve?.objects || []).length > 0;
+    const hasRight = isApparel && (activeDesign.views.rightSleeve?.objects || []).length > 0;
 
     const printLocations: string[] = [];
-    if (hasFront) printLocations.push('Front Chest');
-    if (hasBack) printLocations.push('Back Full');
+    if (hasFront) printLocations.push(isApparel ? 'Front Chest' : 'Front Print');
+    if (hasBack) printLocations.push(isApparel ? 'Back Full' : 'Back Print');
     if (hasLeft) printLocations.push('Left Sleeve');
     if (hasRight) printLocations.push('Right Sleeve');
     if (printLocations.length === 0) printLocations.push('Standard Blank');
@@ -385,12 +476,16 @@ export const DesignerPage: React.FC = () => {
     const frontCost = hasFront ? 199 : 0;
     const backCost = hasBack ? 199 : 0;
     const sleeveCost = (hasLeft ? 99 : 0) + (hasRight ? 99 : 0);
-    const unitPrice = garmentOpt.basePrice + frontCost + backCost + sleeveCost;
+    const unitPrice = (activeDesign.productBasePrice ?? garmentOpt.basePrice) + frontCost + backCost + sleeveCost;
 
     addToCart({
       id: `cart-custom-${Date.now()}`,
-      productId: `prod-${activeDesign.garmentId}`,
-      productName: `Custom ${garmentOpt.name}`,
+      productId: activeDesign.sourceProductId || `prod-${activeDesign.garmentId}`,
+      productName: `Custom ${activeDesign.productName || garmentOpt.name}${
+        isMobileCase && activeDesign.productBrand && selectedSize
+          ? ` (${activeDesign.productBrand} ${selectedSize})`
+          : ''
+      }`,
       garmentType: activeDesign.garmentId,
       colorName: activeDesign.shirtColorName,
       colorHex: activeDesign.shirtColor,
@@ -501,14 +596,16 @@ export const DesignerPage: React.FC = () => {
             setSelectedIds={setSelectedIds}
             onAddObject={handleAddObject}
             onUpdateDesignGarment={handleUpdateDesignGarment}
+            onSelectProduct={handleSelectProduct}
+            onSelectPhoneBrand={handleSelectPhoneBrand}
             onLoadTemplate={handleLoadTemplate}
             onReorderObject={(id, dir) => handleReorderObject(id, dir)}
             onUpdateObject={(id, u) => handleUpdateObject(id, u, true)}
             onDeleteObjects={handleDeleteObjects}
             addToast={addToast}
             selectedSize={selectedSize}
-            onSelectSize={setSelectedSize}
-            onOpenSizeGuide={() => setSizeGuideOpen(true)}
+            onSelectSize={handleSelectProductVariant}
+            onOpenSizeGuide={isApparel ? () => setSizeGuideOpen(true) : undefined}
           />
         </div>
 
@@ -516,30 +613,61 @@ export const DesignerPage: React.FC = () => {
         <div className="flex-1 h-full bg-[#f4f3ef] flex flex-col items-center justify-center relative overflow-hidden">
           {/* Quick Size Switcher above canvas on desktop */}
           <div className="absolute top-3 left-4 z-20 hidden md:flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md rounded-xl border border-stone-200 text-xs shadow-xs max-w-[calc(100%-120px)] overflow-x-auto">
-            <span className="text-[11px] font-bold text-stone-600 pl-2 pr-1 shrink-0">Size:</span>
-            <div className="flex items-center gap-1">
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSelectedSize(s)}
-                  className={`px-2 py-0.5 rounded-lg font-bold text-[10px] transition-colors shrink-0 ${
-                    selectedSize === s
-                      ? 'bg-stone-900 text-white shadow-2xs'
-                      : 'text-stone-700 hover:bg-stone-100 border border-stone-200/60'
-                  }`}
-                  title={`Select size ${s}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setSizeGuideOpen(true)}
-              className="text-[10px] font-bold text-amber-800 hover:text-amber-900 px-2 py-0.5 rounded-md hover:bg-amber-50 transition-colors shrink-0 flex items-center gap-1 border-l border-stone-200 ml-1"
-            >
-              <Ruler className="w-3 h-3" />
-              <span>Chart</span>
-            </button>
+            {isMobileCase ? (
+              <>
+                <label className="flex items-center gap-1.5 px-2">
+                  <span className="text-[10px] font-bold text-stone-500">Brand</span>
+                  <select
+                    value={selectedPhoneBrand}
+                    onChange={(event) => handleSelectPhoneBrand(event.target.value)}
+                    className="max-w-28 bg-transparent py-1 text-[11px] font-semibold text-stone-900 outline-none"
+                  >
+                    {phoneBrands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+                  </select>
+                </label>
+                <label className="flex items-center gap-1.5 border-l border-stone-200 px-2">
+                  <span className="text-[10px] font-bold text-stone-500">Model</span>
+                  <select
+                    value={selectedSize}
+                    onChange={(event) => handleSelectProductVariant(event.target.value)}
+                    className="max-w-40 bg-transparent py-1 text-[11px] font-semibold text-stone-900 outline-none"
+                  >
+                    {availablePhoneModels.map((model) => <option key={model} value={model}>{model}</option>)}
+                  </select>
+                </label>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] font-bold text-stone-600 pl-2 pr-1 shrink-0">
+                  {isApparel ? 'Size:' : 'Variant:'}
+                </span>
+                <div className="flex items-center gap-1">
+                  {availableSizes.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleSelectProductVariant(s)}
+                      className={`px-2 py-0.5 rounded-lg font-bold text-[10px] transition-colors shrink-0 ${
+                        selectedSize === s
+                          ? 'bg-stone-900 text-white shadow-2xs'
+                          : 'text-stone-700 hover:bg-stone-100 border border-stone-200/60'
+                      }`}
+                      title={`Select size ${s}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                {isApparel && (
+                  <button
+                    onClick={() => setSizeGuideOpen(true)}
+                    className="text-[10px] font-bold text-amber-800 hover:text-amber-900 px-2 py-0.5 rounded-md hover:bg-amber-50 transition-colors shrink-0 flex items-center gap-1 border-l border-stone-200 ml-1"
+                  >
+                    <Ruler className="w-3 h-3" />
+                    <span>Chart</span>
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           <DesignerCanvas
@@ -641,6 +769,8 @@ export const DesignerPage: React.FC = () => {
                     setMobileDrawerTab(null);
                   }}
                   onUpdateDesignGarment={handleUpdateDesignGarment}
+                  onSelectProduct={handleSelectProduct}
+                  onSelectPhoneBrand={handleSelectPhoneBrand}
                   onLoadTemplate={(tpl) => {
                     handleLoadTemplate(tpl);
                     setMobileDrawerTab(null);
@@ -650,8 +780,8 @@ export const DesignerPage: React.FC = () => {
                   onDeleteObjects={handleDeleteObjects}
                   addToast={addToast}
                   selectedSize={selectedSize}
-                  onSelectSize={setSelectedSize}
-                  onOpenSizeGuide={() => setSizeGuideOpen(true)}
+                  onSelectSize={handleSelectProductVariant}
+                  onOpenSizeGuide={isApparel ? () => setSizeGuideOpen(true) : undefined}
                 />
               ) : (
                 <DesignerRightSidebar
@@ -686,13 +816,15 @@ export const DesignerPage: React.FC = () => {
       )}
 
       {/* Interactive Size Guide Modal */}
-      <SizeGuideModal
-        isOpen={sizeGuideOpen}
-        onClose={() => setSizeGuideOpen(false)}
-        selectedSize={selectedSize}
-        onSelectSize={setSelectedSize}
-        garmentName={activeDesign.title || 'Studio Custom T-Shirt'}
-      />
+      {isApparel && (
+        <SizeGuideModal
+          isOpen={sizeGuideOpen}
+          onClose={() => setSizeGuideOpen(false)}
+          selectedSize={selectedSize}
+          onSelectSize={setSelectedSize}
+          garmentName={activeDesign.title || 'Studio Custom T-Shirt'}
+        />
+      )}
     </div>
   );
 };

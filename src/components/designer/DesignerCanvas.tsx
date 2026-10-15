@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { DesignObject, CompleteDesign, PrintView, GarmentType } from '../../types';
+import { getPrintAreaBounds, isApparelType } from '../../data/printAreas';
 import { TShirtBaseSvg } from '../common/TShirtBaseSvg';
 import {
   Copy,
@@ -28,17 +29,6 @@ interface DesignerCanvasProps {
   smartGuidesEnabled: boolean;
   zoomLevel: number; // 0.75 to 1.5
 }
-
-// Coordinate space inside the T-shirt print box
-// The T-shirt viewBox is 500 x 600
-// Printable area on front/back: X: 165 to 335 (width 170), Y: 130 to 390 (height 260)
-// On sleeves: X: 200 to 300 (width 100), Y: 180 to 360 (height 180)
-export const PRINT_BOUNDS: Record<PrintView, { x: number; y: number; width: number; height: number }> = {
-  front: { x: 165, y: 130, width: 170, height: 260 },
-  back: { x: 165, y: 130, width: 170, height: 260 },
-  leftSleeve: { x: 200, y: 180, width: 100, height: 180 },
-  rightSleeve: { x: 200, y: 180, width: 100, height: 180 },
-};
 
 type DragMode = 'move' | 'rotate' | 'resize-tl' | 'resize-tc' | 'resize-tr' | 'resize-ml' | 'resize-mr' | 'resize-bl' | 'resize-bc' | 'resize-br';
 
@@ -74,7 +64,8 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
 
   const [hasOutOfBoundsObjects, setHasOutOfBoundsObjects] = useState(false);
 
-  const printArea = PRINT_BOUNDS[activeView];
+  const printArea = getPrintAreaBounds(design.garmentId, activeView);
+  const isApparel = isApparelType(design.garmentId);
 
   // Helper to convert client mouse/touch point to SVG canvas coordinates (0-500, 0-600)
   const getCanvasCoords = useCallback((clientX: number, clientY: number) => {
@@ -350,9 +341,9 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
             {guideLines.verticalCenter && (
               <line
                 x1={printArea.x + printArea.width / 2}
-                y1="80"
+                y1={isApparel ? 80 : printArea.y - 20}
                 x2={printArea.x + printArea.width / 2}
-                y2="520"
+                y2={isApparel ? 520 : printArea.y + printArea.height + 20}
                 stroke="#6366f1"
                 strokeWidth="1.5"
                 strokeDasharray="4 3"
@@ -360,9 +351,9 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
             )}
             {guideLines.horizontalCenter && (
               <line
-                x1="100"
+                x1={isApparel ? 100 : printArea.x - 20}
                 y1={printArea.y + printArea.height / 2}
-                x2="400"
+                x2={isApparel ? 400 : printArea.x + printArea.width + 20}
                 y2={printArea.y + printArea.height / 2}
                 stroke="#6366f1"
                 strokeWidth="1.5"

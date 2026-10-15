@@ -75,6 +75,15 @@ export interface CompleteDesign {
   userId?: string;
   title: string;
   garmentId: GarmentType;
+  sourceProductId?: string;
+  productName?: string;
+  productBasePrice?: number;
+  productSizes?: string[];
+  productColors?: GarmentColor[];
+  productMaterial?: string;
+  productModelVariants?: Record<string, string[]>;
+  productBrand?: string;
+  productModel?: string;
   shirtColor: string; // hex
   shirtColorName: string;
   views: {
@@ -119,6 +128,7 @@ export interface Product {
   reviewCount: number;
   inStock: boolean;
   garmentType: GarmentType;
+  modelVariants?: Record<string, string[]>;
   isNewArrival?: boolean;
   isBestSeller?: boolean;
   features: string[];
@@ -256,4 +266,3 @@ export type AdminTab =
   | 'custom-jobs' 
   | 'inquiries' 
   | 'database';
-

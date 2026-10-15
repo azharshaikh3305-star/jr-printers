@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { GARMENT_COLORS, GARMENT_OPTIONS, SAMPLE_PRODUCTS } from '../data/products';
+import { GARMENT_COLORS, SAMPLE_PRODUCTS } from '../data/products';
 import { STARTER_TEMPLATES } from '../data/templates';
 import authService from '../services/authService';
 import {
@@ -1230,12 +1230,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? product.colors.find(c => c.hex.toLowerCase() === selectedColorHex.toLowerCase()) || product.colors[0]
       : product.colors[0];
 
-    const garmentOpt = GARMENT_OPTIONS.find((g) => g.id === product.garmentType) || GARMENT_OPTIONS[0];
-
     setActiveDesign({
       id: `design-${Date.now()}`,
       title: `Custom ${product.name}`,
       garmentId: product.garmentType,
+      sourceProductId: product.id,
+      productName: product.name,
+      productBasePrice: product.basePrice,
+      productSizes: product.sizes,
+      productColors: product.colors,
+      productMaterial: product.material,
+      productModelVariants: product.modelVariants,
+      productBrand: product.modelVariants ? Object.keys(product.modelVariants)[0] : undefined,
+      productModel: product.modelVariants
+        ? product.modelVariants[Object.keys(product.modelVariants)[0]]?.[0]
+        : undefined,
       shirtColor: color.hex,
       shirtColorName: color.name,
       views: {
@@ -1246,7 +1255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      calculatedPrice: garmentOpt.basePrice,
+      calculatedPrice: product.basePrice,
     });
     setCurrentPage('designer');
     window.scrollTo({ top: 0, behavior: 'smooth' });

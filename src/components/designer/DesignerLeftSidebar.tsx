@@ -4,8 +4,10 @@ import {
   PrintView,
   DesignObject,
   CompleteDesign,
+  Product,
 } from '../../types';
-import { GARMENT_OPTIONS, GARMENT_COLORS } from '../../data/products';
+import { getPrintAreaBounds, isApparelType } from '../../data/printAreas';
+import { GARMENT_OPTIONS, GARMENT_COLORS, PHONE_CASE_MODELS, SAMPLE_PRODUCTS } from '../../data/products';
 import { STICKER_LIBRARY, STICKER_CATEGORIES } from '../../data/stickers';
 import { STARTER_TEMPLATES } from '../../data/templates';
 import {
@@ -36,6 +38,8 @@ interface DesignerLeftSidebarProps {
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   onAddObject: (obj: Omit<DesignObject, 'id' | 'zIndex'>) => void;
   onUpdateDesignGarment: (garmentId: GarmentType, colorHex: string, colorName: string) => void;
+  onSelectProduct: (product: Product) => void;
+  onSelectPhoneBrand: (brand: string) => void;
   onLoadTemplate: (templateDesign: CompleteDesign) => void;
   onReorderObject: (id: string, direction: 'up' | 'down') => void;
   onUpdateObject: (id: string, updates: Partial<DesignObject>) => void;
@@ -55,6 +59,8 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
   setSelectedIds,
   onAddObject,
   onUpdateDesignGarment,
+  onSelectProduct,
+  onSelectPhoneBrand,
   onLoadTemplate,
   onReorderObject,
   onUpdateObject,
@@ -90,6 +96,37 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
 
   // Current view objects
   const currentObjects = design.views[activeView]?.objects || [];
+  const printArea = getPrintAreaBounds(design.garmentId, activeView);
+  const printCenterX = printArea.x + printArea.width / 2;
+  const printCenterY = printArea.y + printArea.height / 2;
+  const isApparel = isApparelType(design.garmentId);
+  const isMobileCase = design.garmentId === 'mobile-case';
+  const phoneModelVariants = design.productModelVariants || (isMobileCase ? PHONE_CASE_MODELS : {});
+  const phoneBrands = Object.keys(phoneModelVariants);
+  const selectedPhoneBrand = design.productBrand || phoneBrands[0] || '';
+  const phoneModels = phoneModelVariants[selectedPhoneBrand] || [];
+  const isDrinkware = design.garmentId === 'ceramic-cup' || design.garmentId === 'sipper-bottle';
+  const availableSizes = isMobileCase
+    ? phoneModels
+    : design.productSizes?.length
+      ? design.productSizes
+      : SIZES;
+  const availableColors = design.productColors?.length ? design.productColors : GARMENT_COLORS;
+  const availableGarments = GARMENT_OPTIONS.filter(
+    (garment) => isApparelType(garment.id) === isApparel
+  );
+  const customizableDrinkware = SAMPLE_PRODUCTS.filter(
+    (product) => product.garmentType === 'ceramic-cup' || product.garmentType === 'sipper-bottle'
+  );
+
+  const fitArtworkToPrintArea = (width: number, height: number) => {
+    const scale = Math.min(
+      1,
+      (printArea.width * 0.75) / width,
+      (printArea.height * 0.75) / height
+    );
+    return { width: Math.round(width * scale), height: Math.round(height * scale) };
+  };
 
   // Handle Multi-file uploads
   const handleFileUpload = (files: FileList | null) => {
@@ -131,16 +168,15 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
 
           // Automatically place onto canvas
           const aspect = width / height;
-          const baseW = 140;
-          const baseH = Math.round(baseW / aspect);
+          const fittedSize = fitArtworkToPrintArea(140, 140 / aspect);
 
           onAddObject({
             type: 'image',
             imageUrl: resultUrl,
-            x: 250, // Center of front print area
-            y: 250,
-            width: baseW,
-            height: baseH,
+            x: printCenterX,
+            y: printCenterY,
+            width: fittedSize.width,
+            height: fittedSize.height,
             rotation: 0,
             scaleX: 1,
             scaleY: 1,
@@ -184,10 +220,10 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
       textAlign: 'center',
       letterSpacing: 2,
       lineHeight: 1.1,
-      x: 250,
-      y: 240,
-      width: Math.max(120, inputText.length * 14),
-      height: Math.max(40, textSize * 1.5),
+      x: printCenterX,
+      y: printCenterY,
+      width: Math.min(printArea.width * 0.8, Math.max(80, inputText.length * 14)),
+      height: Math.min(printArea.height * 0.45, Math.max(32, textSize * 1.5)),
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
@@ -203,13 +239,14 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
 
   // Add sticker
   const handleAddSticker = (stickerUri: string, defaultW: number, defaultH: number) => {
+    const fittedSize = fitArtworkToPrintArea(defaultW, defaultH);
     onAddObject({
       type: 'sticker',
       imageUrl: stickerUri,
-      x: 250,
-      y: 260,
-      width: defaultW,
-      height: defaultH,
+      x: printCenterX,
+      y: printCenterY,
+      width: fittedSize.width,
+      height: fittedSize.height,
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
@@ -224,7 +261,7 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
   };
 
   const navTabs: Array<{ id: SidebarTab; label: string; icon: React.ReactNode }> = [
-    { id: 'garment', label: 'Garment', icon: <Shirt className="w-4 h-4" /> },
+    { id: 'garment', label: isApparel ? 'Garment' : 'Product', icon: <Shirt className="w-4 h-4" /> },
     { id: 'upload', label: 'Upload', icon: <Upload className="w-4 h-4" /> },
     { id: 'text', label: 'Text', icon: <Type className="w-4 h-4" /> },
     { id: 'stickers', label: 'Graphics', icon: <Smile className="w-4 h-4" /> },
@@ -257,50 +294,111 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
         {/* 1. GARMENT & FABRIC COLOR TAB */}
         {activeTab === 'garment' && (
           <div className="space-y-6">
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">
-                Apparel Silhouette
-              </h4>
-              <div className="space-y-2">
-                {GARMENT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() =>
-                      onUpdateDesignGarment(
-                        opt.id,
-                        design.shirtColor,
-                        design.shirtColorName
-                      )
-                    }
-                    className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
-                      design.garmentId === opt.id
-                        ? 'border-stone-900 bg-stone-50 shadow-xs'
-                        : 'border-stone-200 hover:border-stone-400 bg-white'
-                    }`}
-                  >
-                    <div>
-                      <h5 className="text-xs font-bold text-stone-900">{opt.name}</h5>
-                      <p className="text-[11px] text-stone-500">{opt.subtitle}</p>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-stone-900 tabular-nums">
-                      ₹{opt.basePrice}
-                    </span>
-                  </button>
-                ))}
+            {isApparel && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">
+                  Apparel Silhouette
+                </h4>
+                <div className="space-y-2">
+                  {availableGarments.map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() =>
+                        onUpdateDesignGarment(
+                          opt.id,
+                          design.shirtColor,
+                          design.shirtColorName
+                        )
+                      }
+                      className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
+                        design.garmentId === opt.id
+                          ? 'border-stone-900 bg-stone-50 shadow-xs'
+                          : 'border-stone-200 hover:border-stone-400 bg-white'
+                      }`}
+                    >
+                      <div>
+                        <h5 className="text-xs font-bold text-stone-900">{opt.name}</h5>
+                        <p className="text-[11px] text-stone-500">{opt.subtitle}</p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-stone-900 tabular-nums">
+                        ₹{opt.basePrice}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+            {isMobileCase && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Choose Phone Brand & Model
+                </h4>
+                <label className="block">
+                  <span className="text-[11px] font-semibold text-stone-600">Brand</span>
+                  <select
+                    value={selectedPhoneBrand}
+                    onChange={(event) => onSelectPhoneBrand(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-xs font-semibold text-stone-900"
+                  >
+                    {phoneBrands.map((brand) => (
+                      <option key={brand} value={brand}>{brand}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-semibold text-stone-600">Phone Model</span>
+                  <select
+                    value={selectedSize}
+                    onChange={(event) => onSelectSize?.(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-xs font-semibold text-stone-900"
+                  >
+                    {phoneModels.map((model) => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+            {isDrinkware && customizableDrinkware.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">
+                  Choose Product
+                </h4>
+                <div className="space-y-2">
+                  {customizableDrinkware.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => onSelectProduct(product)}
+                      className={`w-full p-3 rounded-xl border text-left transition-all ${
+                        design.sourceProductId === product.id
+                          ? 'border-stone-900 bg-stone-50 shadow-xs'
+                          : 'border-stone-200 hover:border-stone-400 bg-white'
+                      }`}
+                    >
+                      <span className="block text-xs font-bold text-stone-900">
+                        {product.garmentType === 'ceramic-cup' ? 'Cup / Mug' : 'Bottle'}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-stone-500">{product.name}</span>
+                      <span className="mt-1 block text-xs font-mono font-bold text-stone-900">
+                        ₹{product.basePrice}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Color Swatches */}
             <div className="pt-4 border-t border-stone-100">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                  Fabric Color
+                  {isApparel ? 'Fabric Color' : 'Product Color'}
                 </h4>
                 <span className="text-xs font-medium text-stone-800">{design.shirtColorName}</span>
               </div>
 
               <div className="grid grid-cols-5 gap-2.5">
-                {GARMENT_COLORS.map((c) => (
+                {availableColors.map((c) => (
                   <button
                     key={c.name}
                     onClick={() => onUpdateDesignGarment(design.garmentId, c.hex, c.name)}
@@ -338,39 +436,40 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
               </div>
             </div>
 
-            {/* Garment Sizing Spectrum (All Sizes: XXS to 6XL) */}
-            <div className="pt-4 border-t border-stone-100">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                  Select Size ({selectedSize})
-                </h4>
-                {onOpenSizeGuide && (
-                  <button
-                    onClick={onOpenSizeGuide}
-                    className="text-[11px] font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1 hover:underline"
-                  >
-                    <Ruler className="w-3.5 h-3.5" />
-                    <span>Size Guide</span>
-                  </button>
-                )}
-              </div>
+            {!isMobileCase && (
+              <div className="pt-4 border-t border-stone-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                    Select {isApparel ? 'Size' : 'Variant'} ({selectedSize})
+                  </h4>
+                  {isApparel && onOpenSizeGuide && (
+                    <button
+                      onClick={onOpenSizeGuide}
+                      className="text-[11px] font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1 hover:underline"
+                    >
+                      <Ruler className="w-3.5 h-3.5" />
+                      <span>Size Guide</span>
+                    </button>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-4 gap-1.5">
-                {SIZES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => onSelectSize?.(s)}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                      selectedSize === s
-                        ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
-                        : 'bg-stone-50 text-stone-700 border-stone-200 hover:border-stone-400'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {availableSizes.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => onSelectSize?.(s)}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                        selectedSize === s
+                          ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                          : 'bg-stone-50 text-stone-700 border-stone-200 hover:border-stone-400'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -460,13 +559,14 @@ export const DesignerLeftSidebar: React.FC<DesignerLeftSidebarProps> = ({
                       <button
                         onClick={() => {
                           const aspect = file.width / file.height;
+                          const fittedSize = fitArtworkToPrintArea(140, 140 / aspect);
                           onAddObject({
                             type: 'image',
                             imageUrl: file.url,
-                            x: 250,
-                            y: 250,
-                            width: 140,
-                            height: Math.round(140 / aspect),
+                            x: printCenterX,
+                            y: printCenterY,
+                            width: fittedSize.width,
+                            height: fittedSize.height,
                             rotation: 0,
                             scaleX: 1,
                             scaleY: 1,

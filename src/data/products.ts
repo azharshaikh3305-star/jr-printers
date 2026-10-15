@@ -84,6 +84,61 @@ export const SIZES = [
   '6XL',
 ];
 
+export const PHONE_CASE_MODELS: Record<string, string[]> = {
+  Apple: [
+    'iPhone 17 Pro Max', 'iPhone 17 Pro', 'iPhone 17 Air', 'iPhone 17',
+    'iPhone 16 Pro Max', 'iPhone 16 Pro', 'iPhone 16 Plus', 'iPhone 16',
+    'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15',
+    'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14 Plus', 'iPhone 14',
+    'iPhone 13 Pro Max', 'iPhone 13 Pro', 'iPhone 13', 'iPhone 12',
+  ],
+  Samsung: [
+    'Galaxy S26 Ultra', 'Galaxy S26+', 'Galaxy S26',
+    'Galaxy S25 Ultra', 'Galaxy S25+', 'Galaxy S25', 'Galaxy S25 FE',
+    'Galaxy S24 Ultra', 'Galaxy S24+', 'Galaxy S24', 'Galaxy S24 FE',
+    'Galaxy A56 5G', 'Galaxy A55 5G', 'Galaxy A36 5G', 'Galaxy A35 5G',
+    'Galaxy A26 5G', 'Galaxy A25 5G', 'Galaxy A16 5G', 'Galaxy M56 5G',
+    'Galaxy M55 5G', 'Galaxy M35 5G',
+  ],
+  OnePlus: [
+    'OnePlus 13', 'OnePlus 13R', 'OnePlus 12', 'OnePlus 12R',
+    'OnePlus 11', 'OnePlus 11R', 'OnePlus Nord 5', 'OnePlus Nord 4',
+    'OnePlus Nord CE5', 'OnePlus Nord CE4',
+  ],
+  Xiaomi: [
+    'Xiaomi 15 Ultra', 'Xiaomi 15', 'Xiaomi 14 Ultra', 'Xiaomi 14',
+    'Redmi Note 15 Pro+', 'Redmi Note 15 Pro', 'Redmi Note 15',
+    'Redmi Note 14 Pro+', 'Redmi Note 14 Pro', 'Redmi Note 14',
+    'Redmi Note 13 Pro+', 'Redmi Note 13 Pro', 'Redmi Note 13',
+    'Redmi 15 5G', 'Redmi 14C', 'Redmi 13 5G',
+  ],
+  Vivo: [
+    'Vivo X300 Pro', 'Vivo X300', 'Vivo X200 Pro', 'Vivo X200',
+    'Vivo V60', 'Vivo V50', 'Vivo V40 Pro', 'Vivo V40',
+    'Vivo V30 Pro', 'Vivo V30', 'Vivo T4 Pro', 'Vivo T4',
+    'Vivo Y300', 'Vivo Y200',
+  ],
+  Oppo: [
+    'Oppo Find X9 Pro', 'Oppo Find X9', 'Oppo Find X8 Pro', 'Oppo Find X8',
+    'Oppo Reno 14 Pro', 'Oppo Reno 14', 'Oppo Reno 13 Pro', 'Oppo Reno 13',
+    'Oppo Reno 12 Pro', 'Oppo Reno 12', 'Oppo A6 Pro', 'Oppo A5 Pro',
+  ],
+  Realme: [
+    'Realme GT 7 Pro', 'Realme GT 7', 'Realme GT 6', 'Realme 15 Pro',
+    'Realme 15', 'Realme 14 Pro+', 'Realme 14 Pro', 'Realme 14',
+    'Realme P3 Ultra', 'Realme P3 Pro', 'Realme P3', 'Realme Narzo 80 Pro',
+  ],
+  Google: [
+    'Pixel 10 Pro XL', 'Pixel 10 Pro', 'Pixel 10', 'Pixel 9 Pro XL',
+    'Pixel 9 Pro', 'Pixel 9', 'Pixel 8 Pro', 'Pixel 8a', 'Pixel 8',
+  ],
+  Motorola: [
+    'Motorola Edge 60 Pro', 'Motorola Edge 60', 'Motorola Edge 50 Pro',
+    'Motorola Edge 50 Fusion', 'Motorola Edge 50', 'Motorola G86',
+    'Motorola G85', 'Motorola G75', 'Motorola G55',
+  ],
+};
+
 export interface SizeMeasurement {
   size: string;
   chestInches: string;
@@ -592,6 +647,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     reviewCount: 204,
     inStock: true,
     garmentType: 'mobile-case',
+    modelVariants: PHONE_CASE_MODELS,
     isBestSeller: true,
     features: [
       'Edge-to-edge embedded sublimation print (no peeling or fading)',

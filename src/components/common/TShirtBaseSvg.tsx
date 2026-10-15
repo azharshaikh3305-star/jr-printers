@@ -1,5 +1,7 @@
 import React from 'react';
 import { GarmentType, PrintView } from '../../types';
+import { isApparelType } from '../../data/printAreas';
+import { ProductMockupSvg } from './ProductMockupSvg';
 
 interface TShirtBaseSvgProps {
   color: string;
@@ -20,9 +22,23 @@ export const TShirtBaseSvg: React.FC<TShirtBaseSvgProps> = ({
 }) => {
   const isWhite = color.toLowerCase() === '#ffffff' || color.toLowerCase() === '#fff';
   const collarInnerColor = isWhite ? '#e5e7eb' : '#111827';
+  const isApparel = isApparelType(garmentType);
   const isHoodie = garmentType === 'french-terry-hoodie';
   const isPolo = garmentType === 'pique-polo';
   const isOversized = garmentType === 'oversized-boxy';
+
+  if (!isApparel) {
+    return (
+      <ProductMockupSvg
+        color={color}
+        shadowColor={shadowColor}
+        view={view}
+        productType={garmentType}
+        className={className}
+        showPrintAreaGuide={showPrintAreaGuide}
+      />
+    );
+  }
 
   // Render front or back view
   if (view === 'front' || view === 'back') {

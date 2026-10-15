@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { CompleteDesign, PrintView } from '../../types';
+import { isApparelType } from '../../data/printAreas';
 import { TShirtBaseSvg } from '../common/TShirtBaseSvg';
 import { GARMENT_OPTIONS } from '../../data/products';
 import { X, Download, ShoppingBag, Eye, CheckCircle2, Layers } from 'lucide-react';
@@ -21,12 +22,17 @@ export const DesignPreviewModal: React.FC<DesignPreviewModalProps> = ({
   const [isExporting, setIsExporting] = useState(false);
 
   const garment = GARMENT_OPTIONS.find((g) => g.id === design.garmentId) || GARMENT_OPTIONS[0];
+  const isApparel = isApparelType(design.garmentId);
 
   const views: Array<{ id: PrintView; label: string }> = [
     { id: 'front', label: 'Front' },
     { id: 'back', label: 'Back' },
-    { id: 'leftSleeve', label: 'Left Sleeve' },
-    { id: 'rightSleeve', label: 'Right Sleeve' },
+    ...(isApparel
+      ? [
+          { id: 'leftSleeve' as const, label: 'Left Sleeve' },
+          { id: 'rightSleeve' as const, label: 'Right Sleeve' },
+        ]
+      : []),
   ];
 
   // High-Res PNG Generator using HTML5 Canvas
@@ -204,7 +210,7 @@ export const DesignPreviewModal: React.FC<DesignPreviewModalProps> = ({
           </div>
 
           <span className="text-[11px] text-stone-500 font-medium">
-            360° Photorealistic Direct-to-Garment Preview
+            {isApparel ? 'Apparel Mockup Preview' : 'Custom Product Mockup Preview'}
           </span>
         </div>
 
@@ -221,11 +227,13 @@ export const DesignPreviewModal: React.FC<DesignPreviewModalProps> = ({
             {/* Garment Details Card */}
             <div className="mt-4 p-4 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-stone-500">Silhouette</span>
-                <span className="font-semibold text-stone-900">{garment.name}</span>
+                <span className="text-stone-500">{isApparel ? 'Silhouette' : 'Product'}</span>
+                <span className="font-semibold text-stone-900">
+                  {design.productName || garment.name}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">Fabric Color</span>
+                <span className="text-stone-500">{isApparel ? 'Fabric Color' : 'Product Color'}</span>
                 <div className="flex items-center gap-1.5 font-semibold text-stone-900">
                   <span
                     className="w-3 h-3 rounded-full border border-stone-300"
@@ -235,8 +243,10 @@ export const DesignPreviewModal: React.FC<DesignPreviewModalProps> = ({
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">Weight & Feel</span>
-                <span className="font-mono text-stone-900">{garment.weightGsm} GSM Premium</span>
+                <span className="text-stone-500">Material</span>
+                <span className="font-mono text-stone-900">
+                  {design.productMaterial || garment.material}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-stone-500">Active Layers</span>
@@ -289,7 +299,7 @@ export const DesignPreviewModal: React.FC<DesignPreviewModalProps> = ({
               className="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-3.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>Confirm & Add Custom Garment to Bag</span>
+              <span>Confirm & Add Custom Product to Bag</span>
             </button>
 
             <button

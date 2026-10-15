@@ -1,6 +1,6 @@
 import React from 'react';
 import { DesignObject, CompleteDesign, PrintView } from '../../types';
-import { PRINT_BOUNDS } from './DesignerCanvas';
+import { getPrintAreaBounds } from '../../data/printAreas';
 import {
   AlignCenter,
   AlignLeft,
@@ -58,7 +58,7 @@ export const DesignerRightSidebar: React.FC<DesignerRightSidebarProps> = ({
   const primary = currentObjects.find((o) => o.id === selectedIds[0]);
   const isMultiple = selectedIds.length > 1;
 
-  const printArea = PRINT_BOUNDS[activeView];
+  const printArea = getPrintAreaBounds(design.garmentId, activeView);
 
   // If nothing is selected, display helpful overview tips
   if (selectedIds.length === 0 || !primary) {
@@ -69,7 +69,7 @@ export const DesignerRightSidebar: React.FC<DesignerRightSidebarProps> = ({
             Inspector Panel
           </h4>
           <p className="leading-relaxed text-stone-500">
-            Select any graphic, sticker, or text on the T-shirt to adjust position, dimensions, rotation, opacity, and alignment.
+            Select any graphic, sticker, or text on the product to adjust position, dimensions, rotation, opacity, and alignment.
           </p>
 
           <div className="mt-6 p-4 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-3">
