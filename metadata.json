@@ -1,0 +1,6 @@
+{
+  "name": "JR PRINTING WORKS - Custom Printing Studio",
+  "description": "Official custom printing studio by Pro. Shaikh Sameer. T-Shirt Printing, Cup Printing, Pillow Printing, Bottle Printing, Key Chain Printing, Photo Frame Printing, and Mobile Back Covers. Contact: 7888162822 / 7888162824.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
